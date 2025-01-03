@@ -6,6 +6,7 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from openai import OpenAI
 from joblib import dump, load
+import openai
 
 # Load OpenAI API key from .config file
 def load_api_key():
@@ -26,6 +27,16 @@ def load_faiss_index(filename="faiss_store_openai.pkl"):
         return load(filename)
     except FileNotFoundError:
         return None
+
+# Query OpenAI for answers
+def query_openai(prompt, api_key, model="text-davinci-003"):
+    openai.api_key = api_key
+    response = openai.Completion.create(
+        engine=model,
+        prompt=prompt,
+        max_tokens=1000  # Ensure the response fits within token limits
+    )
+    return response.choices[0].text.strip()
 
 # Sidebar input
 st.sidebar.header("Scheme Research Tool")
@@ -57,7 +68,7 @@ if process_button:
             raw_documents = loader.load()
             
             # Preprocessing to extract relevant text
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=200)
             split_docs = text_splitter.split_documents(raw_documents)
             documents.extend(split_docs)
         except Exception as e:
@@ -87,10 +98,19 @@ if query_button:
 
     st.info("Fetching answer...")
     try:
-        docs = vectorstore.similarity_search(query, k=1)
+        # Perform similarity search
+        docs = vectorstore.similarity_search(query, k=5)  # Retrieve top 5 chunks
+        relevant_text = " ".join([doc.page_content for doc in docs])
+        
+        # Query OpenAI with the relevant chunks
+        prompt = f"The following is relevant information:\n{relevant_text}\n\nAnswer the question: {query}"
+        answer = query_openai(prompt, api_key)
+
+        st.write(f"**Answer:** {answer}")
         for doc in docs:
             st.write(f"**Source URL:** {doc.metadata.get('source', 'Unknown')}")
             st.write(f"**Relevant Content:** {doc.page_content}")
     except Exception as e:
         st.error(f"Failed to retrieve answer: {e}")
+
 
