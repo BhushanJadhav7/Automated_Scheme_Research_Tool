@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 from langchain.document_loaders import UnstructuredURLLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from openai import OpenAI
@@ -53,7 +54,12 @@ if process_button:
     for url in url_list:
         try:
             loader = UnstructuredURLLoader(urls=[url])
-            documents.extend(loader.load())
+            raw_documents = loader.load()
+            
+            # Preprocessing to extract relevant text
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+            split_docs = text_splitter.split_documents(raw_documents)
+            documents.extend(split_docs)
         except Exception as e:
             st.error(f"Failed to load content from {url}: {e}")
 
@@ -84,6 +90,7 @@ if query_button:
         docs = vectorstore.similarity_search(query, k=1)
         for doc in docs:
             st.write(f"**Source URL:** {doc.metadata.get('source', 'Unknown')}")
-            st.write(f"**Summary:** {doc.page_content}")
+            st.write(f"**Relevant Content:** {doc.page_content}")
     except Exception as e:
         st.error(f"Failed to retrieve answer: {e}")
+
