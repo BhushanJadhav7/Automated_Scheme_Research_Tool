@@ -3,4 +3,5 @@ langchain
 faiss-cpu
 openai
 requests
-pickle5
+joblib
+

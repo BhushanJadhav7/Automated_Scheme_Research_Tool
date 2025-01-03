@@ -4,7 +4,7 @@ from langchain.document_loaders import UnstructuredURLLoader
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from openai import OpenAI
-import pickle
+from joblib import dump, load
 
 # Load OpenAI API key from .config file
 def load_api_key():
@@ -17,14 +17,12 @@ def load_api_key():
 
 # Save FAISS index
 def save_faiss_index(vectorstore, filename="faiss_store_openai.pkl"):
-    with open(filename, "wb") as f:
-        pickle.dump(vectorstore, f)
+    dump(vectorstore, filename)
 
 # Load FAISS index
 def load_faiss_index(filename="faiss_store_openai.pkl"):
     try:
-        with open(filename, "rb") as f:
-            return pickle.load(f)
+        return load(filename)
     except FileNotFoundError:
         return None
 
